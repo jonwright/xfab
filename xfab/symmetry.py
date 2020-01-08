@@ -5,11 +5,17 @@ related stuff
 
 from __future__ import absolute_import
 from __future__ import print_function
-from numpy import zeros, arccos, pi, dot, transpose, array, concatenate, cos, sin, dot
+from numpy import zeros, arccos, pi, dot, transpose, array, concatenate, \
+    cos, sin, dot, empty, degrees
 from numpy.linalg import det, inv
 from xfab import tools
 from six.moves import range
 
+# numpy det turns out to be slow for 3x3
+def pydet3x3(a):
+    return (a[0][0] * (a[1][1] * a[2][2] - a[2][1] * a[1][2])
+           -a[1][0] * (a[0][1] * a[2][2] - a[2][1] * a[0][2])
+           +a[2][0] * (a[0][1] * a[1][2] - a[1][1] * a[0][2]))
 
 def Umis(umat_1, umat_2, crystal_system):
     """    
@@ -28,21 +34,22 @@ def Umis(umat_1, umat_2, crystal_system):
     #rotation matrix defined by crystal system 
     rot = rotations(crystal_system)
     nrot = rot.shape[0]
-    t_save = zeros((0, 2))
+    t_save = empty((nrot, 2), float)
+    assert abs(pydet3x3(umat_1) - 1) < 0.0001, "umat_1 is not a right handed basis"
+    assert abs(pydet3x3(umat_2) - 1) < 0.0001, "umat_2 is not a right handed basis"
+    tmp = empty((3,3),float)
+    m   = empty((3,3),float)
     for k in range(nrot):
-        g_vector = dot(umat_2, transpose(dot(umat_1, rot[k])))
-        detg = det(g_vector)
-        if detg < 0.9999 or detg > 1.0001:
-            print('mistake %f' % detg)
-        else:
-            length = (g_vector.diagonal().sum()-1.)/2.
-            if abs(length) > 1.00000000:
-                if length > 1:
-                    length = 1.
-                else:
-                    length = -1.                    
-            misangle = arccos(length)
-            t_save = concatenate((t_save, array([[k, misangle*180/pi]])), 0)
+        dot( umat_1, rot[k], out=tmp )
+        dot( umat_2, transpose(tmp), out=m )
+#       assert abs(det(m)-1)<0.0001, "Error in Umis"
+        cosa = (m[0,0]+m[1,1]+m[2,2] - 1.)*0.5
+        if cosa > 1.:
+            cosa = 1.
+        elif cosa < -1.:
+            cosa = -1.
+        t_save[k, 0] = k
+        t_save[k, 1] = degrees( arccos(cosa) )
     return t_save
 
     
@@ -204,6 +211,11 @@ def rotations(crystal_system):
     
     Jette Oddershede, Riso, 8/2/2010
     """
+    if not hasattr(rotations, "cache"):
+        rotations.cache = dict()
+
+    if crystal_system in rotations.cache:
+        return rotations.cache[ crystal_system ]
 
     if crystal_system < 1 or crystal_system > 7:
         raise ValueError('Crystal system shoud have a value between 1 and 7')
@@ -249,4 +261,9 @@ def rotations(crystal_system):
         for i in range(len(rot)):       
             rot[i] = inv(rot[i])
 
+    for mat in rot:
+        # Test they are right handed before caching
+        assert abs(det(mat)-1.)<0.0001, "Error in rotations"
+    
+    rotations.cache[ crystal_system ] = rot
     return rot
