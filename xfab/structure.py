@@ -225,10 +225,6 @@ class build_atomlist:
     def CIFopen(self, ciffile=None, cifblkname=None):
         from CifFile import ReadCif # part of the PycifRW module
         try:
-            # the following is a trick to avoid that urllib.URLopen.open
-            # used by ReadCif misinterprets the url when a drive:\ is 
-            # present (Win)
-            ciffile = ciffile.replace(':','|')
             cf = ReadCif(ciffile)
         except:
             logging.error('File %s could not be accessed' %ciffile)        
@@ -253,7 +249,7 @@ class build_atomlist:
         try:
             self.cifblk = cf[cifblkname]
         except:
-            logging.error('Block - %s - not found in %s' % (blockname, ciffile))
+            logging.error('Block - %s - not found in %s' % (cifblkname, ciffile))
             raise IOError
         return self.cifblk
 

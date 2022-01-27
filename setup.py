@@ -7,12 +7,12 @@ import sys
 
 setup(
   name='xfab',
-  version='0.0.4',
+  version='0.0.5',
   description='Crystallographic toolbox and library',
   license='GPL', maintainer='Henning Osholm Soerensen and Jon Wright',
   maintainer_email='osholm@nano.ku.dk, wright@esrf.eu',
   download_url='http://sourceforge.net/project/showfiles.php?group_id=82044&package_id=309377',
-  url='http://fable.wiki.sourceforge.net/xfab',
+  url='https://github.com/FABLE-3DXRD/xfab',
   packages=['xfab'],
   package_dir={"xfab": "xfab"},
   scripts=["scripts/gff_to_ubi.py",
@@ -24,5 +24,8 @@ setup(
            "scripts/makemap_all.py",
            "scripts/tweakdetpars.py",
            "scripts/flt_remove_beam.py",
-           "scripts/flt_split_phases.py"]
+           "scripts/flt_split_phases.py"],
+  install_requires = ['numpy',
+                      'six',
+                      'pycifrw']
 )
