@@ -5,6 +5,7 @@ related stuff
 
 from __future__ import absolute_import
 from __future__ import print_function
+
 from xfab import tools
 from six.moves import range
 import numpy as np
@@ -13,6 +14,11 @@ from xfab import CHECKS
 from xfab import xfab_logging
 logger = xfab_logging.get_module_level_logger(__name__)
 
+# numpy det turns out to be slow for 3x3
+def pydet3x3(a):
+    return (a[0][0] * (a[1][1] * a[2][2] - a[2][1] * a[1][2])
+           -a[1][0] * (a[0][1] * a[2][2] - a[2][1] * a[0][2])
+           +a[2][0] * (a[0][1] * a[1][2] - a[1][1] * a[0][2]))
 
 def Umis(umat_1, umat_2, crystal_system):
     """Compute the misorientation between two rotation matrices.
@@ -54,7 +60,6 @@ def Umis(umat_1, umat_2, crystal_system):
     misorientations[:, 0] = np.arange(len(rot))
     misorientations[:, 1] = np.arccos(lengths.clip(-1, 1)) * 180./np.pi
     return misorientations
-
 
 def add_perm(hkl, crystal_system):
     """
@@ -214,6 +219,11 @@ def rotations(crystal_system):
 
     Jette Oddershede, Riso, 8/2/2010
     """
+    if not hasattr(rotations, "cache"):
+        rotations.cache = dict()
+
+    if crystal_system in rotations.cache:
+        return rotations.cache[ crystal_system ]
 
     if crystal_system < 1 or crystal_system > 7:
         raise ValueError('Crystal system shoud have a value between 1 and 7')
@@ -259,6 +269,11 @@ def rotations(crystal_system):
         for i in range(len(rot)):
             rot[i] = rot[i].T
 
+    for mat in rot:
+        # Test they are right handed before caching
+        assert abs(det(mat)-1.)<0.0001, "Error in rotations"
+    
+    rotations.cache[ crystal_system ] = rot
     return rot
 
 ROTATIONS = [None] + [np.ascontiguousarray(rotations(i)) for i in range(1,8)]
